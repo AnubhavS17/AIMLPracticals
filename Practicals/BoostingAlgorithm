@@ -1,0 +1,61 @@
+import numpy as np
+import pandas as pd
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend to suppress TkAgg message
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import AdaBoostClassifier, GradientBoostingClassifier, VotingClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import accuracy_score
+
+# Load the dataset
+df = pd.read_csv(r"global_electricity_production_data.csv")
+print("First 5 rows of dataset:\n", df.head())  # Display first few rows
+
+# Handling missing values
+df.dropna(inplace=True)
+
+# Check available columns
+print("Available columns:", df.columns)
+
+# Define the target column (choose based on your use case)
+target_column = 'product'  # Choose 'value' if predicting electricity production
+
+if target_column not in df.columns:
+   raise ValueError(f"Error: '{target_column}' column not found in the dataset.")
+
+# Splitting dataset into features and target
+X = df.drop([target_column], axis=1)  # Features
+y = df[target_column]  # Target variable
+
+# Convert categorical columns into numerical form
+label_encoders = {}
+for col in X.select_dtypes(include=['object']).columns:
+   label_encoders[col] = LabelEncoder()
+   X[col] = label_encoders[col].fit_transform(X[col])
+
+# Convert target variable into numerical values
+y = LabelEncoder().fit_transform(y)
+
+# Splitting data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# AdaBoost Classifier
+ada = AdaBoostClassifier(estimator=DecisionTreeClassifier(max_depth=1),
+                        n_estimators=50, learning_rate=0.1)
+ada.fit(X_train, y_train)
+y_pred_ada = ada.predict(X_test)
+print("AdaBoost Accuracy:", accuracy_score(y_test, y_pred_ada))
+
+# Gradient Boosting Classifier
+gb = GradientBoostingClassifier(n_estimators=100, learning_rate=0.1, max_depth=3)
+gb.fit(X_train, y_train)
+y_pred_gb = gb.predict(X_test)
+print("Gradient Boosting Accuracy:", accuracy_score(y_test, y_pred_gb))
+
+# Voting Ensemble
+voting = VotingClassifier(estimators=[('ada', ada), ('gb', gb)], voting='hard')
+voting.fit(X_train, y_train)
+y_pred_voting = voting.predict(X_test)
+print("Voting Ensemble Accuracy:", accuracy_score(y_test, y_pred_voting))
