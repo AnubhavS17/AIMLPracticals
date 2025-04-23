@@ -1,0 +1,49 @@
+import pandas as pd
+import numpy as np
+from sklearn.cluster import KMeans
+from sklearn_extra.cluster import KMedoids
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import silhouette_score
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Step 1: Load Data
+df = pd.read_csv("global_electricity_production_data.csv")
+
+# Step 2: Extract numeric part from 'value' column
+df['value'] = df['value'].astype(str).str.extract(r'([\d.]+)').astype(float)
+
+# Step 3: Pivot table to have one row per country and features as products
+pivot_df = df.pivot_table(index='country_name', columns='product', values='value', aggfunc='sum').fillna(0)
+
+# Step 4: Normalize the data
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(pivot_df)
+
+# Step 5: K-Means Clustering
+kmeans = KMeans(n_clusters=3, random_state=42)
+kmeans_labels = kmeans.fit_predict(X_scaled)
+print("K-Means Silhouette Score:", silhouette_score(X_scaled, kmeans_labels))
+
+# Step 6: K-Medoids Clustering
+kmedoids = KMedoids(n_clusters=3, random_state=42)
+kmedoids_labels = kmedoids.fit_predict(X_scaled)
+print("K-Medoids Silhouette Score:", silhouette_score(X_scaled, kmedoids_labels))
+
+# Step 7: Plotting clusters (Using PCA to reduce to 2D for visualization)
+from sklearn.decomposition import PCA
+pca = PCA(n_components=2)
+X_pca = pca.fit_transform(X_scaled)
+
+# Plot K-Means
+plt.figure(figsize=(10, 5))
+plt.subplot(1, 2, 1)
+sns.scatterplot(x=X_pca[:, 0], y=X_pca[:, 1], hue=kmeans_labels, palette="rainbow")
+plt.title("K-Means Clustering")
+
+# Plot K-Medoids
+plt.subplot(1, 2, 2)
+sns.scatterplot(x=X_pca[:, 0], y=X_pca[:, 1], hue=kmedoids_labels, palette="Set2")
+plt.title("K-Medoids Clustering")
+plt.tight_layout()
+plt.show()
