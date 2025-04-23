@@ -1,0 +1,66 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.metrics import accuracy_score, classification_report
+
+# Load your CSV dataset
+df = pd.read_csv("global_electricity_production_data.csv")
+
+# Preview dataset
+print("Dataset Preview:\n", df.head())
+print("\nColumn Types:\n", df.dtypes)
+
+# Convert object columns to datetime if possible
+for col in df.columns:
+   if df[col].dtype == 'object':
+       try:
+           df[col] = pd.to_datetime(df[col])
+           print(f"Converted '{col}' to datetime")
+       except:
+           pass
+
+# Extract date features if datetime columns exist
+for col in df.select_dtypes(include=['datetime64']).columns:
+   df[f'{col}_year'] = df[col].dt.year
+   df[f'{col}_month'] = df[col].dt.month
+   df[f'{col}_day'] = df[col].dt.day
+   df.drop(col, axis=1, inplace=True)
+
+# Define target column
+target_col = 'country_name'
+
+# Drop non-numeric and target column from features
+X = df.drop(columns=[target_col])
+X = X.select_dtypes(include=['int64', 'float64'])  # Keep only numeric columns
+y = df[target_col]
+
+# Handle missing values
+X.fillna(X.mean(), inplace=True)
+
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# --- Decision Tree (Gini) ---
+print("\n=== Decision Tree Classifier (Gini) ===")
+clf_gini = DecisionTreeClassifier(criterion='gini')
+clf_gini.fit(X_train, y_train)
+y_pred_gini = clf_gini.predict(X_test)
+print("Accuracy (Gini):", accuracy_score(y_test, y_pred_gini))
+print(classification_report(y_test, y_pred_gini))
+
+# --- Decision Tree (Entropy - ID3) ---
+print("\n=== Decision Tree Classifier (Entropy - ID3) ===")
+clf_entropy = DecisionTreeClassifier(criterion='entropy')
+clf_entropy.fit(X_train, y_train)
+y_pred_entropy = clf_entropy.predict(X_test)
+print("Accuracy (Entropy):", accuracy_score(y_test, y_pred_entropy))
+print(classification_report(y_test, y_pred_entropy))
+
+# --- Naive Bayes ---
+print("\n=== Naïve Bayes Classifier ===")
+nb_classifier = GaussianNB()
+nb_classifier.fit(X_train, y_train)
+y_pred_nb = nb_classifier.predict(X_test)
+print("Accuracy (Naive Bayes):", accuracy_score(y_test, y_pred_nb))
+print(classification_report(y_test, y_pred_nb))
