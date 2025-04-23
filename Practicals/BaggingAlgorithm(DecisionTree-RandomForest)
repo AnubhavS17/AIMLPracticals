@@ -1,0 +1,50 @@
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import BaggingClassifier, RandomForestClassifier
+from sklearn.metrics import accuracy_score
+from sklearn.preprocessing import LabelEncoder
+
+file_path = "airports.csv"
+df = pd.read_csv(file_path)
+
+print("Dataset Overview:")
+print(df.head())
+print("\nMissing Values:\n", df.isnull().sum())
+
+df.dropna(inplace=True)
+
+X = df.drop(columns=["state"])
+y = df["state"]
+
+X = pd.get_dummies(X)
+label_encoder = LabelEncoder()
+y = label_encoder.fit_transform(y)
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Decision Tree
+dtree = DecisionTreeClassifier(random_state=42)
+dtree.fit(X_train, y_train)
+y_pred_tree = dtree.predict(X_test)
+
+# Bagging
+bagging = BaggingClassifier(estimator=DecisionTreeClassifier(), n_estimators=10, random_state=42)
+bagging.fit(X_train, y_train)
+y_pred_bagging = bagging.predict(X_test)
+
+# Random Forest
+random_forest = RandomForestClassifier(n_estimators=10, random_state=42)
+random_forest.fit(X_train, y_train)
+y_pred_rf = random_forest.predict(X_test)
+
+# Accuracy Scores
+accuracy_tree = accuracy_score(y_test, y_pred_tree)
+accuracy_bagging = accuracy_score(y_test, y_pred_bagging)
+accuracy_rf = accuracy_score(y_test, y_pred_rf)
+
+print("\n  Model Accuracy Scores:")
+print(f"Decision Tree Accuracy: {accuracy_tree:.4f}")
+print(f"Bagging Classifier Accuracy: {accuracy_bagging:.4f}")
+print(f"Random Forest Accuracy: {accuracy_rf:.4f}")
